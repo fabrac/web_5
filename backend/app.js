@@ -2,6 +2,9 @@ const bookRoutes = require('./routes/book');
 const userRoutes = require('./routes/user');
 const express = require('express');
 const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config()
 
 const app = express();
 app.use(express.json());
@@ -16,8 +19,9 @@ app.use('/api/auth', userRoutes);
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
 const mongoose = require('mongoose');
+mongoose.set('strictQuery', false);
 
-mongoose.connect('mongodb+srv://HlY6OM3lNI3cLQJf:9dgufmiaC1J8x41Z@cluster0.t4enbcm.mongodb.net/?retryWrites=true&w=majority',
+mongoose.connect(process.env.MONGODB,
   { useNewUrlParser: true,
     useUnifiedTopology: true })
   .then(() => console.log('Connexion à MongoDB réussie !'))
