@@ -2,6 +2,9 @@ const Book = require('../models/book');
 const fs = require('fs');
 
 exports.createBook = (req, res, next) => {
+  if (!req.file) {
+    res.status(400).json( { error: "No image" });
+  }
     const bookObject = JSON.parse(req.body.book);
     delete bookObject._id;
     delete bookObject._userId;
@@ -12,10 +15,12 @@ exports.createBook = (req, res, next) => {
         userId: req.auth.userId,
         imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
     });
-    console.log(book);
     book.save()
     .then(() => {res.status(201).json({message: 'Livre enregistré !'})})
-    .catch(error => { res.status(400).json( { error })});
+    .catch(error => {
+      fs.unlink(`images/${req.file.filename}`, () => {});
+       res.status(400).json( { error })
+      });
  };
 
 exports.getOneBook = (req, res, next) => {
@@ -47,8 +52,6 @@ exports.modifyBook = (req, res, next) => {
             } else {
                 if (req.file) {
                   const filename = book.imageUrl.split('/images/')[1];
-                  console.log(filename);
-                  console.log(book);
                   fs.unlink(`images/${filename}`, () => {});
                 }
                 Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
@@ -95,20 +98,25 @@ exports.getAllBooks = (req, res, next) => {
 };
 
 exports.createRating = (req, res, next) => {
-  console.log(req.params.id);
   Book.findOne({
     _id: req.params.id
   }).then(
     (book) => {
-      book.ratings.push({userId: req.body.userId, grade: req.body.rating});
       var avg = 0;
       book.ratings.forEach(element => {
           avg += element.grade;
+          if (element.userId === req.body.userId) {
+            res.status(404).json({
+              error: "Already rated"
+            });
+          }
+          return;
       });
-      avg /= book.ratings.length;
+      avg += req.body.rating;
+      avg /= book.ratings.length + 1;
+      book.ratings.push({userId: req.body.userId, grade: req.body.rating});
       book.averageRating = avg.toFixed(1);
       book.save();
-      console.log(book);
       res.status(200).json(book);
     }
   ).catch(
