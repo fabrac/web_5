@@ -3,7 +3,7 @@ const fs = require('fs');
 
 exports.createBook = (req, res, next) => {
   if (!req.file) {
-    res.status(400).json( { error: "No image" });
+    return res.status(400).json( { error: "No image" });
   }
     const bookObject = JSON.parse(req.body.book);
     delete bookObject._id;
@@ -48,7 +48,7 @@ exports.modifyBook = (req, res, next) => {
     Book.findOne({_id: req.params.id})
         .then((book) => {
             if (book.userId != req.auth.userId) {
-                res.status(401).json({ message : 'Not authorized'});
+                res.status(403).json({ message : 'Not authorized'});
             } else {
                 if (req.file) {
                   const filename = book.imageUrl.split('/images/')[1];
@@ -68,7 +68,7 @@ exports.modifyBook = (req, res, next) => {
     Book.findOne({ _id: req.params.id})
         .then(book => {
             if (book.userId != req.auth.userId) {
-                res.status(401).json({message: 'Not authorized'});
+                res.status(403).json({message: 'Not authorized'});
             } else {
                 const filename = book.imageUrl.split('/images/')[1];
                 fs.unlink(`images/${filename}`, () => {
@@ -105,12 +105,11 @@ exports.createRating = (req, res, next) => {
       var avg = 0;
       book.ratings.forEach(element => {
           avg += element.grade;
-          if (element.userId === req.body.userId) {
-            res.status(404).json({
+          if (element.userId === req.auth.userId) {
+            return res.status(404).json({
               error: "Already rated"
             });
           }
-          return;
       });
       avg += req.body.rating;
       avg /= book.ratings.length + 1;
